@@ -5,7 +5,6 @@ import sys
 import numpy as np
 
 import torch
-import torch
 import nibabel as nib
 # TODO: add the performace metrics from the catalyst library
 #from catalyst.metrics.functional._segmentation import dice
