@@ -41,13 +41,17 @@ class BrainDataset(Dataset):
         self.open_fn = open_fn
         self.generator = CoordsGenerator(list_shape=list_shape, list_sub_shape=list_sub_shape)
         self.mode = mode
-        self.dict_transform = dict_transform if dict_transform is not None else lambda x: x
+        self.dict_transform = dict_transform if dict_transform is not None else __id_fn__
         self.input_key = input_key
         self.output_key = output_key
         self.subvolume_shape = np.array(list_sub_shape)
         self.subjects = len(self.data)
         self.n_subvolumes = n_subvolumes
-
+    
+    global __id_fn__
+    def __id_fn__(x):
+        return x
+    
     def __len__(self) -> int:
         """
         Returns:
