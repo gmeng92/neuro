@@ -3,11 +3,12 @@
 import os
 import sys
 import numpy as np
+importa pandas as pd
 
 import torch
 import nibabel as nib
 # TODO: add the performace metrics from the catalyst library
-#from catalyst.metrics.functional._segmentation import dice
+from catalyst.metrics.functional._segmentation import dice
 import matplotlib.pyplot as plt
 
 from neuro.predictor import Predictor
@@ -16,10 +17,9 @@ from neuro.model import MeshNet, UNet
 
 # Specify the parameters
 volume_shape = [256, 256, 256]
-subvolume_shape = [38, 38, 38]
-n_subvolumes = 1024
-n_classes = 3
-# atlas_classes = 104
+subvolume_shape = [64, 64, 64]
+n_subvolumes = 32
+n_classes = 4
 device_name = "cuda:0" if torch.cuda.is_available() else "cpu"
 device = torch.device(device_name)
 
@@ -31,15 +31,15 @@ device = torch.device(device_name)
 #Case 3: Training from scratch
 #Data loader for the naip200 dataset
 def get_loaders(
-  random_state: int,
+  random_state: int = 123,
   volume_shape: List[int],
   subvolume_shape: List[int],
   in_csv_train: str = None,
   in_csv_valid: str = None,
   in_csv_infer: str = None,
   batch_size: int = 32,
-  # TODO: maybe problematic as well
-  num_workers: int = 10,
+  # remark: num_workers=0 is important or it may raise an error 
+  num_workers: int = 0,
 ) -> dict:
 
   datasets = {}
@@ -151,9 +151,9 @@ class CustomRunner(Runner):
           scheduler.step()
 
         one_hot_targets = (
-          torch.nn.functional.one_hot(y, 31)
+          torch.nn.functional.one_hot(y, num_classes=4)
           .permute(0, 4, 1, 2, 3)
-          #.cuda()
+          .cuda()
         )
 
         logits_softmax = F.softmax(y_hat)
@@ -170,8 +170,6 @@ class CustomRunner(Runner):
                                            
 # The training loop
 
-volume_shape = [256, 256, 256]
-subvolume_shape = [38, 38, 38]
 train_loaders, infer_loaders = get_loaders(
     123, volume_shape, subvolume_shape,
     "./data/dataset_train.csv",
@@ -179,7 +177,7 @@ train_loaders, infer_loaders = get_loaders(
     "./data/dataset_infer.csv")
 
 n_classes = 4
-n_epochs = 30
+n_epochs = 50
 meshnet = MeshNet(n_channels=1, n_classes=n_classes)
 unet = UNet(n_channels=1, n_classes=n_classes)
 
@@ -237,7 +235,8 @@ segmentations = voxel_majority_predict_from_subvolumes(infer_loaders['infer'],
                                                      n_classes, segmentations)
 subject_metrics = []
 for subject, subject_data in enumerate(tqdm(infer_loaders['infer'].dataset.data)):
-    seg_labels = nib.load(subject_data['nii_labels']).get_fdata()
+    # Ground truth labels
+    seg_labels = nib.load(subject_data['labels']).get_fdata()
     segmentation_labels = torch.nn.functional.one_hot(
         torch.from_numpy(seg_labels).to(torch.int64), n_classes)
 

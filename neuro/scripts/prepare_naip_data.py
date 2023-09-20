@@ -4,10 +4,8 @@
 # and save the dataframe to csv files
 #
 # Usage:
-
-
 #
-
+# python prepare_naip_data.py /home/naip_data/ 123 0.7 0.1
 import argparse
 import os
 
@@ -22,7 +20,7 @@ def find_sample(path, seed_val = 123, train_size = 0.7, valid_size = 0.1):
         path (str): path to mri images
             the path to the mri images is in the following format:
                 subject_UID/resampled_t1.nii.gz
-                subject_UID/segmentation_labels.nii.gz
+                subject_UID/resampled_combined_labels.nii.gz
             labels = [  0, # outside of the brain
                         1, # gray matter
                         2, # white matter
@@ -45,15 +43,15 @@ def find_sample(path, seed_val = 123, train_size = 0.7, valid_size = 0.1):
                     continue
                 if train == "resampled_t1.nii.gz":
                     labels_data["images"].append(os.path.join(person_folder, "resampled_t1.nii.gz"))
-                if train == "segmentation_labels.nii.gz":
+                if train == "resampled_combined_labels.nii.gz":
                     labels_data["labels"].append(
-                        os.path.join(person_folder, "segmentation_labels.nii.gz")
+                        os.path.join(person_folder, "resampled_combined_labels.nii.gz")
                     )
                     t += 1
     print(f"Total of {t} subjects!")
 
     dataframe = pd.DataFrame(labels_data)
-    dataframe.to_csv("./data/dataset.csv", index=False)
+    dataframe.to_csv("dataset.csv", index=False)
     dataframe = dataframe.sample(frac=1, random_state=seed_val)
     # set the percentage of the training, validation and inference data
     if train_size+valid_size >= 1:
@@ -61,10 +59,10 @@ def find_sample(path, seed_val = 123, train_size = 0.7, valid_size = 0.1):
     else:
         num_train = int(len(dataframe) * train_size)
         num_valid = int(len(dataframe) * valid_size)
-        dataframe.iloc[:num_train, :].to_csv("./data/dataset_train.csv", index=False)
-        dataframe.iloc[num_train:num_train+num_valid, :].to_csv("./data/dataset_valid.csv", index=False)
-        dataframe.iloc[num_train+num_valid:, :].to_csv("./data/dataset_infer.csv", index=False)
-        print(f'Saving the dataset split to ./data/dataset_train.csv, ./data/dataset_valid.csv, ./data/dataset_infer.csv...')
+        dataframe.iloc[:num_train, :].to_csv("dataset_train.csv", index=False)
+        dataframe.iloc[num_train:num_train+num_valid, :].to_csv("dataset_valid.csv", index=False)
+        dataframe.iloc[num_train+num_valid:, :].to_csv("dataset_infer.csv", index=False)
+        print(f'Saving the dataset split to dataset_train.csv, dataset_valid.csv, dataset_infer.csv...')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="folders to files")
@@ -74,5 +72,5 @@ if __name__ == "__main__":
     parser.add_argument("valid_size", type=float, default=0.1, help="percentage of the validation data")
     params = parser.parse_args()
 
-    find_sample(params.datapath, params.n_labels, params.seed_val, params.train_size, params.valid_size)
+    find_sample(params.datapath, params.seed_val, params.train_size, params.valid_size)
 
